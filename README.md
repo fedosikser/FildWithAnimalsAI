@@ -1,11 +1,11 @@
 # Graph Designer
 
-Небольшой консольный ASCII-проект на C++.
+Консольная ASCII-симуляция на C++, в которой маленькие котики бегают по полю, останавливаются и разговаривают друг с другом.
 
-Сейчас в проекте есть две основные части:
+Сейчас проект состоит из двух основных частей:
 
-- генерация ASCII-барсуков на поле;
-- `LLMClient` для подключения к локальной LLM на `127.0.0.1:1234`.
+- симуляция котиков с ролями, движением и плашками реплик;
+- `LLMClient` для подключения к локальной LLM на `127.0.0.1:1234`, чтобы котики могли вести короткий диалог.
 
 ## Сборка
 
@@ -19,7 +19,7 @@ g++ -std=c++17 -Wall -Wextra -pedantic main.cpp -o main
 ./main
 ```
 
-При старте программа спросит размер окна:
+При запуске программа спросит размер окна:
 
 - `Введите высоту окна [64]:`
 - `Введите ширину окна [207]:`
@@ -29,49 +29,32 @@ g++ -std=c++17 -Wall -Wextra -pedantic main.cpp -o main
 - высота `64`
 - ширина `207`
 
+Минимальные размеры:
+
+- высота `20`
+- ширина `70`
+
 ## Что делает программа
 
-После запуска создаётся поле заданного размера, и на нём постепенно появляются барсуки в разных ASCII-вариантах.
+После запуска создаётся поле заданного размера. На нём живут несколько котиков, и каждый из них имеет:
 
-Для каждого нового барсука:
+- имя;
+- роль;
+- характер;
+- маленький ASCII-спрайт;
+- собственное движение;
+- текущую реплику в плашке.
 
-- случайно выбирается один из вариантов из [badger_variants.h](/Users/dmitrijkuznecov/c++/Grokaem/graph_designer/badger_variants.h);
-- выбирается случайная позиция;
-- проверяется, что новый барсук не пересекается с уже существующими;
-- дополнительно соблюдается минимальная дистанция между барсуками.
+Котики:
 
-## Где менять настройки
+- гуляют по полю;
+- иногда останавливаются;
+- могут заговорить с ближайшим котиком;
+- показывают реплики прямо на поле рядом с собой.
 
-### Минимальное расстояние между барсуками
+Плашки реплик стараются не накладываться друг на друга.
 
-Файл: [main.cpp](/Users/dmitrijkuznecov/c++/Grokaem/graph_designer/main.cpp)
-
-Функция: `CreareArt(Point point)`
-
-Строка настройки:
-
-```cpp
-const int spacing = 5;
-```
-
-Увеличь число, если хочешь больше расстояние между барсуками.
-
-### Варианты барсуков
-
-Файл: [badger_variants.h](/Users/dmitrijkuznecov/c++/Grokaem/graph_designer/badger_variants.h)
-
-Там хранится список ASCII-вариантов, из которых случайно выбирается новый барсук.
-
-### Дефолтный размер окна
-
-Файл: [main.cpp](/Users/dmitrijkuznecov/c++/Grokaem/graph_designer/main.cpp)
-
-Сейчас дефолты такие:
-
-- высота `64`
-- ширина `207`
-
-## LLM client
+## Диалоги через LLM
 
 Файл: [llm_client.h](/Users/dmitrijkuznecov/c++/Grokaem/graph_designer/llm_client.h)
 
@@ -81,13 +64,99 @@ const int spacing = 5;
 - port: `1234`
 - endpoint: `/v1/chat/completions`
 
-Он отправляет HTTP-запросы к локальной LLM и ожидает OpenAI-совместимый формат ответа.
+Когда два котика начинают разговор, программа формирует короткий prompt и просит локальную модель вернуть диалог в таком формате:
+
+```text
+Имя1: реплика
+Имя2: ответ
+```
+
+Если локальная модель недоступна или отвечает не в нужном формате, симуляция не падает: используются встроенные fallback-реплики.
+
+Логика диалога находится в [cat_simulation.h](/Users/dmitrijkuznecov/c++/Grokaem/graph_designer/cat_simulation.h).
+
+## Почему теперь не съезжает текст
+
+Раньше русские плашки ломали ASCII-сетку, потому что поле хранилось в `char`.
+
+Сейчас:
+
+- матрица поля хранится в wide-символах в [matrix.h](/Users/dmitrijkuznecov/c++/Grokaem/graph_designer/matrix.h);
+- UTF-8 строки конвертируются для вывода через [utf_utils.h](/Users/dmitrijkuznecov/c++/Grokaem/graph_designer/utf_utils.h);
+- плашки рисуются через [field_bubbles.h](/Users/dmitrijkuznecov/c++/Grokaem/graph_designer/field_bubbles.h).
+
+## Где менять настройки
+
+### Скорость симуляции
+
+Файл: [main.cpp](/Users/dmitrijkuznecov/c++/Grokaem/graph_designer/main.cpp)
+
+Ищи строку:
+
+```cpp
+sleep_ms(700);
+```
+
+Больше число — медленнее движение и обновление.
+
+### Имена, роли, характеры и спрайты котиков
+
+Файл: [cat_simulation.h](/Users/dmitrijkuznecov/c++/Grokaem/graph_designer/cat_simulation.h)
+
+Функция:
+
+```cpp
+createCats(...)
+```
+
+Там задаются:
+
+- имена котиков;
+- роли;
+- черты характера;
+- ASCII-спрайты;
+- стартовые позиции;
+- направления движения.
+
+### Когда котики разговаривают
+
+Файл: [cat_simulation.h](/Users/dmitrijkuznecov/c++/Grokaem/graph_designer/cat_simulation.h)
+
+Основная логика:
+
+- `moveCats(...)`
+- `updateConversation(...)`
+- `startDialogue(...)`
+
+Там можно менять:
+
+- как часто котики останавливаются;
+- на каком расстоянии они начинают локально взаимодействовать;
+- сколько тактов держится реплика.
+
+### Плашки реплик
+
+Файл: [field_bubbles.h](/Users/dmitrijkuznecov/c++/Grokaem/graph_designer/field_bubbles.h)
+
+Там находится:
+
+- перенос текста;
+- размеры плашек;
+- выбор позиции плашки рядом с котиком;
+- защита от наложения плашек друг на друга.
 
 ## Файлы проекта
 
-- [main.cpp](/Users/dmitrijkuznecov/c++/Grokaem/graph_designer/main.cpp) — основной запуск и генерация поля
-- [badger_variants.h](/Users/dmitrijkuznecov/c++/Grokaem/graph_designer/badger_variants.h) — ASCII-варианты барсуков
+- [main.cpp](/Users/dmitrijkuznecov/c++/Grokaem/graph_designer/main.cpp) — запуск симуляции и главный цикл
+- [cat_simulation.h](/Users/dmitrijkuznecov/c++/Grokaem/graph_designer/cat_simulation.h) — котики, движение и диалоги
+- [field_bubbles.h](/Users/dmitrijkuznecov/c++/Grokaem/graph_designer/field_bubbles.h) — плашки реплик на поле
 - [llm_client.h](/Users/dmitrijkuznecov/c++/Grokaem/graph_designer/llm_client.h) — клиент локальной LLM
-- [matrix.h](/Users/dmitrijkuznecov/c++/Grokaem/graph_designer/matrix.h) — работа с матрицей символов
+- [matrix.h](/Users/dmitrijkuznecov/c++/Grokaem/graph_designer/matrix.h) — матрица символов поля
+- [utf_utils.h](/Users/dmitrijkuznecov/c++/Grokaem/graph_designer/utf_utils.h) — UTF-8/Wide конвертация
 - [utils.h](/Users/dmitrijkuznecov/c++/Grokaem/graph_designer/utils.h) — очистка экрана и задержки
-- [ascii_art.h](/Users/dmitrijkuznecov/c++/Grokaem/graph_designer/ascii_art.h) — вспомогательная работа с ASCII-art
+
+## Ограничения
+
+- Для живых диалогов нужен локальный LLM-сервер на `127.0.0.1:1234`.
+- Если сервер не запущен, котики всё равно продолжают симуляцию, но говорят fallback-репликами.
+- В `utf_utils.h` используются deprecated-конвертеры стандартной библиотеки; проект собирается, но компилятор может показывать предупреждения.

@@ -238,8 +238,8 @@ inline void startDialogue(std::vector<Cat>& cats, size_t speaker, size_t target,
         std::string first;
         std::string second;
         if (response.find("Ошибка") != 0 && parseDialogue(response, cats[speaker], cats[target], first, second)) {
-            cats[speaker].speech = first;
-            cats[target].speech = second;
+            cats[speaker].speech = "[LLM] " + first;
+            cats[target].speech = "[LLM] " + second;
             usedLLM = true;
         }
     }

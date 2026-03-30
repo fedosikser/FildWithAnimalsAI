@@ -26,15 +26,7 @@ class Matrix {
         return matrix;
     }
 
-    void FillMartixBorder() {
-        for (int i = 0; i < height; i++) {
-            for (int j = 0; j < width; j++) {
-                if (i == 0 || i == height-1 || j == 0 || j == width-1) {
-                    matrix[i][j] = L'*';
-                }
-            }
-        }
-    }
+   
 
     void printMatrix() {
         for (int i = 0; i < height; i++) {
@@ -53,7 +45,7 @@ class Matrix {
         this->height = height;
         this->width = width;
         this->matrix=createEmptyMatrix();
-        FillMartixBorder();
+        //FillMatrixBorder();
     }
     ~Matrix() {
         for (int i = 0; i < height; i++) {

@@ -1,6 +1,6 @@
+#include <clocale>
 #include <cstdlib>
 #include <iostream>
-#include <clocale>
 #include <locale>
 #include <sstream>
 #include <string>
@@ -17,8 +17,8 @@ using namespace std;
 namespace {
 
 void clearInterior(Matrix& matrix) {
-    for (int row = 1; row < matrix.height - 1; ++row) {
-        for (int col = 1; col < matrix.width - 1; ++col) {
+    for (int row = 0; row < matrix.height; ++row) {
+        for (int col = 0; col < matrix.width; ++col) {
             matrix.matrix[row][col] = L' ';
         }
     }
@@ -29,7 +29,8 @@ void drawCat(Matrix& matrix, const Cat& cat) {
         for (size_t j = 0; j < cat.sprite[i].length(); ++j) {
             char pixel = cat.sprite[i][j];
             if (pixel != ' ') {
-                setCell(matrix, cat.row + static_cast<int>(i), cat.col + static_cast<int>(j), static_cast<unsigned char>(pixel));
+                setCell(matrix, cat.row + static_cast<int>(i), cat.col + static_cast<int>(j),
+                        static_cast<wchar_t>(static_cast<unsigned char>(pixel)));
             }
         }
     }
@@ -37,7 +38,6 @@ void drawCat(Matrix& matrix, const Cat& cat) {
 
 void render(Matrix& matrix, const vector<Cat>& cats, int tick) {
     clearInterior(matrix);
-    matrix.FillMartixBorder();
 
     for (const Cat& cat : cats) {
         drawCat(matrix, cat);
@@ -46,7 +46,7 @@ void render(Matrix& matrix, const vector<Cat>& cats, int tick) {
 
     clearScreen();
     wcout << L"Симуляция кошачьего двора" << endl;
-    wcout << L"Котики гуляют, останавливаются и болтают друг с другом." << endl;
+    wcout << L"Котики гуляют, останавливаются и разговаривают." << endl;
     wcout << L"Такт: " << tick << endl << endl;
     matrix.printMatrix();
 }
@@ -61,7 +61,6 @@ int main() {
     int height = 64;
     int width = 207;
     string input;
-    LLMClient client("127.0.0.1", 1234, "/v1/chat/completions");
 
     cout << "Введите высоту окна [64]: ";
     getline(cin, input);
@@ -86,6 +85,7 @@ int main() {
 
     Matrix matrix(height, width);
     vector<Cat> cats = createCats(height, width);
+    LLMClient client("127.0.0.1", 1234, "/v1/chat/completions");
 
     srand(0);
     int tick = 0;

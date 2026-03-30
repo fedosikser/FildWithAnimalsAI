@@ -187,7 +187,7 @@ int main() {
         clearScreen();
         flushTerminal();
         matrix_g->printMatrix();
-        sleep_ms(1000);
+        sleep_ms(1000); // настройка таймингов
         
 
     }
